@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catálogo de Preços — Master Colchões</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{
+    --azul-900:#0b2540; --azul-800:#0f3358; --azul-700:#154573;
+    --azul-100:#e7eef7; --azul-050:#f4f8fc;
+    --texto:#16232f; --texto-suave:#5b6b7a; --linha:#dbe4ee;
+    --verde:#1a7a4c; --verde-bg:#e5f6ec;
+    --roxo:#5b3aa6; --roxo-bg:#efe9fb;
+    --sombra: 0 1px 2px rgba(15,51,88,.06), 0 8px 24px rgba(15,51,88,.08);
+    color-scheme: light;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    background: linear-gradient(180deg, var(--azul-050) 0%, #eef3f8 100%);
+    color:var(--texto); padding: 32px 20px 80px; min-height:100vh;
+  }
+  .wrap{ max-width: 1180px; margin: 0 auto; }
+
+  /* ---------- Login ---------- */
+  #telaLogin{ position:fixed; inset:0; background:linear-gradient(180deg, var(--azul-900) 0%, var(--azul-800) 100%); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px; }
+  #telaLogin.oculto{ display:none; }
+  .caixa-login{ background:#fff; border-radius:18px; box-shadow:var(--sombra); padding:32px 30px; width:100%; max-width:360px; }
+  .caixa-login .selo{ font-family:'Manrope',sans-serif; font-weight:800; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--azul-700); }
+  .caixa-login h1{ font-family:'Manrope',sans-serif; font-weight:800; font-size:20px; margin:4px 0 18px; color:var(--azul-900); }
+  .caixa-login .campo{ margin-bottom:14px; }
+  .caixa-login .campo label{ display:block; margin-bottom:6px; }
+  .caixa-login .campo input{ width:100%; padding:11px 12px; border:1.5px solid var(--linha); border-radius:9px; font-size:14px; color:var(--texto); background:var(--azul-050); }
+  .caixa-login .campo input:focus{ outline:2px solid var(--azul-700); outline-offset:1px; background:#fff; }
+  .caixa-login .btn-primaria{ width:100%; justify-content:center; margin-top:4px; }
+  .erro-login{ color:#b3261e; font-size:12.5px; font-weight:600; margin:10px 0 0; min-height:16px; }
+  .app-oculto{ display:none !important; }
+  .barra-conta{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--texto-suave); }
+  .barra-conta .email{ font-weight:700; color:var(--azul-800); }
+  #statusSync{ font-size:11.5px; font-weight:600; color:var(--texto-suave); }
+  #statusSync.ok{ color:var(--verde); }
+  #statusSync.erro{ color:#b3261e; }
+
+  /* ---------- Header ---------- */
+  .topo{ display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:22px; }
+  .marca{ display:flex; flex-direction:column; gap:4px; }
+  .marca .selo{ font-family:'Manrope',sans-serif; font-weight:800; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--azul-700); }
+  .marca h1{ font-family:'Manrope',sans-serif; font-weight:800; font-size:clamp(24px,3.4vw,34px); margin:0; color:var(--azul-900); letter-spacing:-0.01em; }
+  .marca p{ margin:2px 0 0; color:var(--texto-suave); font-size:14px; }
+  .acoes{ display:flex; gap:10px; flex-wrap:wrap; }
+  button{ font-family:inherit; cursor:pointer; border:none; }
+  .btn{ font-weight:600; font-size:14px; padding:10px 16px; border-radius:10px; display:inline-flex; align-items:center; gap:8px; }
+  .btn:active{ transform: translateY(1px); }
+  .btn-primaria{ background:var(--azul-800); color:#fff; box-shadow:var(--sombra); }
+  .btn-primaria:hover{ background:var(--azul-900); }
+  .btn-secundaria{ background:#fff; color:var(--azul-800); border:1px solid var(--linha); }
+  .btn-secundaria:hover{ background:var(--azul-100); }
+  .btn-pequeno{ font-size:12.5px; padding:7px 11px; border-radius:8px; }
+
+  /* ---------- Painel padrão ---------- */
+  .painel{ background:#fff; border:1px solid var(--linha); border-radius:16px; box-shadow:var(--sombra); padding:18px 22px; margin-bottom:20px; }
+  .painel h2{ font-family:'Manrope',sans-serif; font-size:13px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--azul-700); margin:0 0 4px; }
+  .painel .sub{ font-size:13px; color:var(--texto-suave); margin:0 0 14px; }
+  .campos-padrao{ display:grid; grid-template-columns:repeat(3, minmax(150px,1fr)) auto; gap:14px; align-items:end; }
+  .campo{ display:flex; flex-direction:column; gap:6px; }
+  .campo label{ font-size:12px; font-weight:600; color:var(--texto-suave); }
+  .campo .input-pct{ position:relative; }
+  .campo input{ width:100%; padding:10px 30px 10px 12px; border:1.5px solid var(--linha); border-radius:9px; font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; color:var(--azul-900); background:var(--azul-050); }
+  .campo input:focus{ outline:2px solid var(--azul-700); outline-offset:1px; background:#fff; }
+  .campo .input-pct::after{ content:"%"; position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:13px; font-weight:700; color:var(--texto-suave); pointer-events:none; }
+
+  /* ---------- Seções gerais ---------- */
+  .secao{ margin-bottom:22px; }
+  .secao-cabecalho{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; flex-wrap:wrap; }
+  .secao-titulo{ display:flex; align-items:baseline; gap:10px; }
+  .secao-numero{ font-family:'Manrope',sans-serif; font-weight:800; font-size:12px; color:#fff; background:var(--azul-800); width:22px; height:22px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .secao-titulo h2{ font-family:'Manrope',sans-serif; font-weight:800; font-size:16px; margin:0; color:var(--azul-900); }
+  .secao-nota{ margin:2px 0 12px 32px; font-size:13px; color:var(--texto-suave); }
+
+  /* ---------- Tabela (base comum) ---------- */
+  .cartao-tabela{ background:#fff; border:1px solid var(--linha); border-radius:16px; box-shadow:var(--sombra); overflow:hidden; }
+  .scroll-x{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; }
+  table.tabela-bases{ min-width:600px; }
+  thead th{ text-align:left; font-family:'Manrope',sans-serif; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--azul-700); background:var(--azul-100); padding:11px 14px; border-bottom:1px solid var(--linha); white-space:nowrap; position:sticky; top:0; z-index:2; }
+  thead th.num{ text-align:right; }
+  tbody td{ padding:9px 14px; border-bottom:1px solid var(--linha); vertical-align:middle; font-size:14px; }
+  td.num{ text-align:right; font-variant-numeric:tabular-nums; }
+  td input[type="text"]{ width:100%; min-width:110px; border:1.5px solid transparent; border-radius:7px; padding:7px 9px; font-size:14px; font-weight:600; color:var(--texto); background:transparent; }
+  td input[type="text"]:hover, td input[type="number"]:hover, select:hover{ border-color:var(--linha); }
+  td input[type="text"]:focus, td input[type="number"]:focus, select:focus{ outline:none; border-color:var(--azul-700); background:#fff; }
+  td input[type="number"]{ width:60px; text-align:right; border:1.5px solid transparent; border-radius:7px; padding:7px 9px; font-size:14px; font-weight:700; color:var(--texto); background:transparent; font-variant-numeric:tabular-nums; }
+  .cel-pct{ display:flex; align-items:center; justify-content:flex-end; gap:3px; }
+  .cel-pct span.sinal{ font-size:13px; font-weight:700; color:var(--texto-suave); }
+  .btn-remover{ width:26px; height:26px; border-radius:8px; background:transparent; color:var(--texto-suave); display:flex; align-items:center; justify-content:center; font-size:15px; line-height:1; border:1px solid transparent; }
+  .btn-remover:hover{ background:#fdecea; color:#b3261e; border-color:#f1c9c5; }
+  tbody tr:last-child td{ border-bottom:none; }
+
+  /* ---------- Legenda de categorias ---------- */
+  .legenda-cat{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+  .pill-cat{ font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:999px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+  /* ---------- Tabela de catálogo (1 tabela contínua, agrupada) ---------- */
+  table.tabela-catalogo{ min-width:820px; }
+  table.tabela-catalogo thead th{ padding:9px 14px; font-size:10px; }
+
+  tr.faixa-categoria td{ padding:7px 14px; font-family:'Manrope',sans-serif; font-weight:800; font-size:11px; letter-spacing:.07em; text-transform:uppercase; border-bottom:none; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+  tbody.grupo-produto{ border-top:2px solid var(--azul-050); }
+  tr.linha-produto{ background:var(--azul-050); }
+  tr.linha-produto td{ padding:7px 14px 6px; }
+  .cabecalho-produto{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+  .input-nome-produto{ font-family:'Manrope',sans-serif; font-weight:800; font-size:14.5px; color:var(--azul-900); border:1.5px solid transparent; border-radius:7px; padding:3px 5px; background:transparent; min-width:130px; }
+  .input-espec{ font-size:12px; color:var(--texto-suave); border:1.5px solid transparent; border-radius:7px; padding:3px 5px; background:transparent; font-style:italic; min-width:160px; flex:1; }
+  .input-nome-produto:hover, .input-espec:hover{ border-color:var(--linha); }
+  .input-nome-produto:focus, .input-espec:focus{ outline:none; border-color:var(--azul-700); background:#fff; }
+  .garantia-pill{ display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:700; color:var(--verde); background:var(--verde-bg); padding:3px 8px; border-radius:999px; -webkit-print-color-adjust:exact; print-color-adjust:exact; white-space:nowrap; }
+  .garantia-pill input{ width:56px; border:none; background:transparent; font-weight:700; color:inherit; font-size:10.5px; padding:0; }
+  .garantia-pill input:focus{ outline:none; }
+  .chk-ehbase{ display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:600; color:var(--roxo); background:var(--roxo-bg); padding:3px 8px; border-radius:999px; margin-left:8px; cursor:pointer; white-space:nowrap; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .chk-ehbase input{ margin:0; accent-color:var(--roxo); cursor:pointer; }
+  .acoes-produto{ display:flex; align-items:center; gap:4px; margin-left:auto; }
+
+  tr.linha-medida td{ padding:6px 14px; }
+  tr.linha-medida:nth-of-type(odd){ background:#fbfcfe; }
+  td.col-medida{ padding-left:26px !important; }
+  td.col-medida input{ font-size:13px; font-weight:500; }
+
+  .celula-preco{ display:flex; flex-direction:column; gap:1px; align-items:flex-end; }
+  .preco-principal{ font-weight:800; font-size:13.5px; color:var(--texto); font-variant-numeric:tabular-nums; }
+  .preco-secundario{ display:flex; gap:4px; align-items:center; font-size:9.5px; font-weight:700; color:var(--texto-suave); font-variant-numeric:tabular-nums; }
+  .preco-secundario .chip{ background:var(--azul-100); color:var(--azul-800); padding:1px 5px; border-radius:5px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .celula-conjunto .preco-principal{ color:var(--roxo); }
+  .celula-conjunto .preco-secundario .chip{ background:var(--roxo-bg); color:var(--roxo); }
+  .sem-conjunto{ font-size:11.5px; color:var(--texto-suave); font-style:italic; }
+
+  td select{ width:100%; min-width:140px; border:1.5px solid var(--linha); border-radius:7px; padding:5px 8px; font-size:12px; font-weight:600; color:var(--azul-800); background:#fff; }
+  .col-conjunto-sel{ min-width:150px; }
+
+  .rodape-secao{ display:flex; justify-content:flex-start; padding:10px 14px; background:var(--azul-050); border-top:1px solid var(--linha); }
+
+  .rodape-pagina{ margin-top:22px; text-align:center; font-size:12px; color:var(--texto-suave); }
+  .conjunto-print-label{ display:none; }
+
+  /* ---------- Impressão ---------- */
+  @media print{
+    body{ background:#fff; padding:0; font-size:10px; }
+    .acoes, .btn-remover, .btn-remover-produto, .btn-add-medida, th.col-acao, td.col-acao, .btn, .painel,
+    .col-marcacao, .col-custo, .col-pct, .col-conjunto-sel, .secao-nota, .rodape-secao, .rodape-pagina, td select,
+    .chk-ehbase{ display:none !important; }
+    .scroll-x{ overflow-x:visible !important; }
+    table.tabela-catalogo, table.tabela-bases{ min-width:0 !important; width:100% !important; table-layout:auto; }
+    thead th{ position:static; }
+    .cartao-tabela{ box-shadow:none; border:1px solid #ccd6e0; }
+    .secao{ margin-bottom:8px; }
+    .secao-cabecalho{ margin-bottom:4px; }
+    .secao-numero{ width:15px; height:15px; font-size:9px; }
+    .secao-titulo h2{ font-size:12px; }
+    .topo{ margin-bottom:8px; }
+    .marca p{ display:none; }
+    .marca h1{ font-size:17px; }
+    .marca .selo{ font-size:9px; }
+    .legenda-cat{ display:none; }
+
+    table.tabela-catalogo thead th{ padding:4px 8px !important; font-size:8px !important; }
+    tr.faixa-categoria td{ padding:4px 8px !important; font-size:9px !important; }
+    tr.faixa-categoria{ break-inside:avoid; break-after:avoid; }
+    tbody.grupo-produto{ break-inside:avoid; }
+    tr.linha-produto td{ padding:3px 8px 2px !important; }
+    tr.linha-medida td{ padding:2px 8px !important; }
+    td.col-medida{ padding-left:16px !important; }
+    .input-nome-produto{ font-size:10px !important; padding:0 2px !important; }
+    .input-espec{ font-size:8.5px !important; padding:0 2px !important; }
+    .garantia-pill{ font-size:7.5px !important; padding:1px 6px !important; }
+    .garantia-pill input{ width:38px !important; font-size:7.5px !important; }
+    td.col-medida input{ font-size:9px !important; }
+    .celula-preco{ gap:0; }
+    .preco-principal{ font-size:9.5px !important; }
+    .preco-secundario{ font-size:7px !important; gap:2px; }
+    .preco-secundario .chip{ padding:0 3px; }
+    td input, .campo input{ border-color:transparent !important; background:transparent !important; }
+    .wrap{ max-width:100%; }
+    @page{ margin: 8mm; }
+  }
+
+  @media (max-width: 720px){
+    .campos-padrao{ grid-template-columns: 1fr 1fr; }
+    .painel{ padding:16px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="telaLogin">
+  <div class="caixa-login">
+    <span class="selo">Master Colchões</span>
+    <h1>Entrar no catálogo de preços</h1>
+    <form id="formLogin">
+      <div class="campo">
+        <label for="loginEmail">E-mail</label>
+        <input type="email" id="loginEmail" autocomplete="username" required>
+      </div>
+      <div class="campo">
+        <label for="loginSenha">Senha</label>
+        <input type="password" id="loginSenha" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn btn-primaria" id="btnEntrar">Entrar</button>
+      <p class="erro-login" id="erroLogin"></p>
+    </form>
+  </div>
+</div>
+
+<div class="wrap app-oculto" id="app">
+
+  <div class="topo">
+    <div class="marca">
+      <span class="selo">Master Colchões · Capim Grosso/BA</span>
+      <h1>Catálogo de Preços — Uso Interno</h1>
+      <p>Organizado por linha, com preço unitário e de conjunto lado a lado, ficha técnica e garantia.</p>
+    </div>
+    <div class="acoes">
+      <span class="barra-conta"><span class="email" id="emailLogado"></span></span>
+      <span id="statusSync"></span>
+      <button class="btn btn-secundaria btn-pequeno" id="btnSair">Sair</button>
+      <button class="btn btn-primaria" id="btnPdf">Gerar PDF</button>
+    </div>
+  </div>
+
+  <div class="painel">
+    <h2>Padrão da tabela</h2>
+    <p class="sub">Marcação e descontos padrão. "Aplicar a todas as linhas" atualiza bases e todos os produtos.</p>
+    <div class="campos-padrao">
+      <div class="campo">
+        <label for="padraoMarcacao">Marcação sobre o custo</label>
+        <div class="input-pct"><input type="number" id="padraoMarcacao" value="90" step="1"></div>
+      </div>
+      <div class="campo">
+        <label for="padraoCartao">Desconto no cartão</label>
+        <div class="input-pct"><input type="number" id="padraoCartao" value="5" step="1"></div>
+      </div>
+      <div class="campo">
+        <label for="padraoAvista">Desconto à vista (Pix/dinheiro)</label>
+        <div class="input-pct"><input type="number" id="padraoAvista" value="15" step="1"></div>
+      </div>
+      <button class="btn btn-secundaria" id="btnAplicarPadrao">Aplicar a todas as linhas</button>
+    </div>
+  </div>
+
+  <div class="secao">
+    <div class="secao-cabecalho">
+      <div class="secao-titulo"><span class="secao-numero">1</span><h2>Catálogo — Colchões, Bases e Diversos</h2></div>
+      <button class="btn btn-secundaria btn-pequeno" id="btnAdicionarProduto">+ Adicionar produto</button>
+    </div>
+    <p class="secao-nota">Tudo é cadastrado como produto (mesmo as bases) — igual estrutura pra todos, agrupados por categoria (faixa colorida). Marque "Disponível como conjunto" nos produtos que servem de base pra outro (ex: Base Box) — eles passam a aparecer no seletor "Conjunto com" dos colchões, com preço próprio de venda avulsa. Marcação, cartão e à vista podem variar linha a linha — não precisam ser iguais.
+    <div class="legenda-cat" id="legendaCategorias"></div>
+    <div class="cartao-tabela">
+      <div class="scroll-x">
+        <table class="tabela-catalogo" id="tabelaProdutos">
+          <thead><tr><th>Produto / Medida</th><th class="num col-custo">Custo</th><th class="num col-marcacao">Marcação</th><th class="num col-pct">Cartão</th><th class="num col-pct">À Vista</th><th class="col-conjunto-sel">Conjunto com</th><th class="num">Unitário</th><th class="num">Conjunto</th><th class="col-acao"></th></tr></thead>
+        </table>
+      </div>
+      <div class="rodape-secao"><button class="btn btn-secundaria btn-pequeno" id="btnAdicionarProdutoRodape">+ Adicionar produto</button></div>
+    </div>
+  </div>
+
+  <p class="rodape-pagina">Master Colchões — tabela de referência interna. Não compartilhar com clientes.</p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "master-colchoes-catalogo-v4"; // usado só como cache local/offline
+  var fmt = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+  var tabelaProdutos = document.getElementById("tabelaProdutos");
+  var legendaCategorias = document.getElementById("legendaCategorias");
+
+  function novoId(){
+    if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+  }
+
+  // ---------------------------------------------------------------
+  // CONFIGURAÇÃO DO SUPABASE — troque pelos dados do SEU projeto:
+  // Painel do Supabase > Project Settings > API.
+  // ---------------------------------------------------------------
+  var SUPABASE_URL = "https://lylftzomzqbxvyfsqyrf.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_aCQrrqlWUnIc014e8ie4Zw_vBY4o2Th";
+  var supa = (window.supabase && SUPABASE_URL.indexOf("http") === 0)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+  var PALETA = [
+    { bg:"#e7eef7", cor:"#154573" }, // azul
+    { bg:"#e5f6ec", cor:"#1a7a4c" }, // verde
+    { bg:"#efe9fb", cor:"#5b3aa6" }, // roxo
+    { bg:"#fff2da", cor:"#8a5a00" }, // âmbar
+    { bg:"#fbe9f0", cor:"#9c2b5a" }, // rosa
+    { bg:"#e4f6f6", cor:"#146a6a" }  // teal
+  ];
+  function corCategoria(nome){
+    var s = String(nome || "");
+    var soma = 0;
+    for(var i=0;i<s.length;i++) soma += s.charCodeAt(i);
+    return PALETA[soma % PALETA.length];
+  }
+
+  var produtosExemplo = [
+    { categoria: "Diversos", nome: "Base Box", especificacao: "Estrutura reforçada · vendida avulsa ou em conjunto", garantia: "1 ano", disponivelConjunto: true,
+      medidas: [
+        { medida: "Casal (138x188)", custo: 300, marcacao: 90, descCartao: 5, descAvista: 15, baseId: "" },
+        { medida: "Queen (158x198)", custo: 360, marcacao: 90, descCartao: 5, descAvista: 15, baseId: "" },
+        { medida: "King (193x203)",  custo: 480, marcacao: 90, descCartao: 5, descAvista: 15, baseId: "" }
+      ]},
+    { categoria: "Linha Convencional", nome: "Resistente Liso", especificacao: "Espuma D28 · até 90kg", garantia: "6 meses",
+      medidas: [
+        { medida: "Solteiro 88x188x12", custo: 260, marcacao: 90, descCartao: 5, descAvista: 15, baseId: "" },
+        { medida: "Casal 138x188x12",   custo: 340, marcacao: 90, descCartao: 5, descAvista: 15, baseId: "" }
+      ]},
+    { categoria: "Linha Convencional", nome: "Union Box Branca", especificacao: "Espuma D26 · até 90kg", garantia: "6 meses",
+      medidas: [
+        { medida: "Casal 138x188x12", custo: 300, marcacao: 90, descCartao: 5, descAvista: 15, baseId: "" }
+      ]},
+    { categoria: "Linha Alta", nome: "D45 Ortopédico", especificacao: "Espuma D45 · até 150kg", garantia: "1 ano",
+      medidas: [
+        { medida: "Casal 138x188x28",  custo: 620,  marcacao: 90, descCartao: 5, descAvista: 15, baseId: "" },
+        { medida: "Queen 158x198x28",  custo: 820,  marcacao: 90, descCartao: 5, descAvista: 15, baseId: "" },
+        { medida: "King 193x203x28",   custo: 1080, marcacao: 90, descCartao: 5, descAvista: 15, baseId: "" }
+      ]},
+    { categoria: "Linha Alta", nome: "Fit D45", especificacao: "Espuma D45 · até 120kg", garantia: "1 ano",
+      medidas: [
+        { medida: "Casal 138x188x25", custo: 560, marcacao: 90, descCartao: 5, descAvista: 15, baseId: "" },
+        { medida: "Queen 158x198x25", custo: 740, marcacao: 90, descCartao: 5, descAvista: 15, baseId: "" }
+      ]},
+    { categoria: "Linha Premium", nome: "Airtech Superpocket", especificacao: "Molas ensacadas + espuma D28 · até 100kg", garantia: "2 anos",
+      medidas: [
+        { medida: "Casal 138x188x25",  custo: 850,  marcacao: 90, descCartao: 5, descAvista: 15, baseId: "" },
+        { medida: "Queen 158x198x25",  custo: 1150, marcacao: 90, descCartao: 5, descAvista: 15, baseId: "" },
+        { medida: "King 193x203x25",   custo: 1550, marcacao: 92, descCartao: 5, descAvista: 15, baseId: "" }
+      ]},
+    { categoria: "Linha Premium", nome: "Ortothel Boutique", especificacao: "Molas ensacadas + látex · até 130kg", garantia: "2 anos",
+      medidas: [
+        { medida: "Queen 158x198x30", custo: 1400, marcacao: 90, descCartao: 5, descAvista: 15, baseId: "" },
+        { medida: "King 193x203x30",  custo: 1850, marcacao: 90, descCartao: 5, descAvista: 15, baseId: "" }
+      ]}
+  ];
+
+  function escapeAttr(s){ return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+
+  /* ---------------- Persistência ---------------- */
+  function carregarLocal(){
+    try{
+      var salvo = localStorage.getItem(STORAGE_KEY);
+      if(salvo){
+        var dados = JSON.parse(salvo);
+        if(dados && Array.isArray(dados.produtos)) return dados;
+      }
+    }catch(e){}
+    return { produtos: produtosExemplo.slice() };
+  }
+
+  function salvar(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        produtos: coletarProdutos(),
+        padrao: {
+          marcacao: document.getElementById("padraoMarcacao").value,
+          cartao: document.getElementById("padraoCartao").value,
+          avista: document.getElementById("padraoAvista").value
+        }
+      }));
+    }catch(e){}
+    agendarSincronizacao();
+  }
+
+  /* ---------------- Sincronização com Supabase ---------------- */
+  var idsConhecidos = { produtos: new Set(), medidas: new Set() };
+  var timerSync = null;
+  var elStatusSync = document.getElementById("statusSync");
+
+  function statusSync(texto, classe){
+    if(!elStatusSync) return;
+    elStatusSync.textContent = texto;
+    elStatusSync.className = classe || "";
+  }
+
+  function agendarSincronizacao(){
+    if(!supa || !sessaoAtual) return;
+    statusSync("Salvando…", "");
+    clearTimeout(timerSync);
+    timerSync = setTimeout(sincronizarSupabase, 700);
+  }
+
+  async function carregarDoSupabase(){
+    var resProdutos = await supa.from("produtos").select("*").order("categoria").order("ordem");
+    if(resProdutos.error) throw resProdutos.error;
+    var resMedidas = await supa.from("medidas").select("*").order("ordem");
+    if(resMedidas.error) throw resMedidas.error;
+    var resConfig = await supa.from("configuracao").select("*").limit(1);
+
+    var porProduto = {};
+    (resMedidas.data || []).forEach(function(m){
+      (porProduto[m.produto_id] = porProduto[m.produto_id] || []).push({
+        id: m.id, medida: m.medida, custo: Number(m.custo), marcacao: Number(m.marcacao),
+        descCartao: Number(m.desconto_cartao), descAvista: Number(m.desconto_avista),
+        baseId: m.conjunto_medida_id || ""
+      });
+    });
+    var produtos = (resProdutos.data || []).map(function(p){
+      return {
+        id: p.id, categoria: p.categoria, nome: p.nome, especificacao: p.especificacao,
+        garantia: p.garantia, disponivelConjunto: !!p.disponivel_conjunto, medidas: porProduto[p.id] || []
+      };
+    });
+
+    idsConhecidos.produtos = new Set(produtos.map(function(p){ return p.id; }));
+    idsConhecidos.medidas = new Set((resMedidas.data || []).map(function(m){ return m.id; }));
+
+    var padrao = null;
+    if(resConfig.data && resConfig.data[0]){
+      padrao = {
+        marcacao: resConfig.data[0].marcacao_padrao,
+        cartao: resConfig.data[0].desconto_cartao_padrao,
+        avista: resConfig.data[0].desconto_avista_padrao
+      };
+    }
+    return { produtos: produtos, padrao: padrao };
+  }
+
+  async function sincronizarSupabase(){
+    if(!supa || !sessaoAtual) return;
+    try{
+      var produtosAtuais = coletarProdutos();
+      var produtosRows = produtosAtuais.map(function(p, i){
+        return { id: p.id, categoria: p.categoria, nome: p.nome, especificacao: p.especificacao,
+          garantia: p.garantia, disponivel_conjunto: p.disponivelConjunto, ordem: i };
+      });
+      var medidasRows = [];
+      produtosAtuais.forEach(function(p){
+        p.medidas.forEach(function(m, i){
+          medidasRows.push({ id: m.id, produto_id: p.id, medida: m.medida, custo: m.custo,
+            marcacao: m.marcacao, desconto_cartao: m.descCartao, desconto_avista: m.descAvista,
+            conjunto_medida_id: m.baseId || null, ordem: i });
+        });
+      });
+
+      var idsProdutosAtuais = new Set(produtosRows.map(function(r){ return r.id; }));
+      var idsMedidasAtuais = new Set(medidasRows.map(function(r){ return r.id; }));
+      var medidasRemovidas = Array.from(idsConhecidos.medidas).filter(function(id){ return !idsMedidasAtuais.has(id); });
+      var produtosRemovidos = Array.from(idsConhecidos.produtos).filter(function(id){ return !idsProdutosAtuais.has(id); });
+
+      // ordem: apaga medidas removidas antes (evita erro de referência de conjunto),
+      // grava produtos e medidas atuais, só então apaga produtos removidos.
+      if(medidasRemovidas.length) await supa.from("medidas").delete().in("id", medidasRemovidas);
+      if(produtosRows.length) { var r1 = await supa.from("produtos").upsert(produtosRows); if(r1.error) throw r1.error; }
+      if(medidasRows.length) { var r2 = await supa.from("medidas").upsert(medidasRows); if(r2.error) throw r2.error; }
+      if(produtosRemovidos.length) await supa.from("produtos").delete().in("id", produtosRemovidos);
+
+      await supa.from("configuracao").update({
+        marcacao_padrao: parseFloat(document.getElementById("padraoMarcacao").value) || 0,
+        desconto_cartao_padrao: parseFloat(document.getElementById("padraoCartao").value) || 0,
+        desconto_avista_padrao: parseFloat(document.getElementById("padraoAvista").value) || 0
+      }).eq("id", true);
+
+      idsConhecidos.produtos = idsProdutosAtuais;
+      idsConhecidos.medidas = idsMedidasAtuais;
+      statusSync("Salvo na nuvem ✓", "ok");
+    }catch(err){
+      console.error("Erro ao sincronizar com o Supabase:", err);
+      statusSync("Erro ao salvar na nuvem", "erro");
+    }
+  }
+
+  /* Produtos marcados como "disponível como conjunto" (ex: Base Box) viram opções
+     de conjunto pra qualquer outro produto — cada medida deles gera 1 opção. */
+  function mapaBasesAtual(){
+    var mapa = {};
+    tabelaProdutos.querySelectorAll("tbody.grupo-produto").forEach(function(tbody){
+      var chk = tbody.querySelector(".campo-ehbase");
+      if(!chk || !chk.checked) return;
+      var nomeProduto = tbody.querySelector(".input-nome-produto").value || "Produto";
+      tbody.querySelectorAll(".linha-medida").forEach(function(tr){
+        var custo = parseFloat(tr.querySelector(".campo-custo").value) || 0;
+        var marcacao = parseFloat(tr.querySelector(".campo-marcacao").value) || 0;
+        var medida = tr.querySelector(".campo-medida").value || "";
+        mapa[tr.dataset.id] = {
+          nome: nomeProduto + " — " + medida,
+          precoCheio: custo * (1 + marcacao / 100),
+          produtoId: tbody.dataset.id
+        };
+      });
+    });
+    return mapa;
+  }
+
+  /* ---------------- Produtos (uma tabela contínua, agrupada por tbody) ---------------- */
+  function linhaMedidaHTML(m, id){
+    return '<tr class="linha-medida" data-id="' + id + '" data-base-id="' + escapeAttr(m.baseId || "") + '">' +
+      '<td class="col-medida"><input type="text" class="campo-medida" value="' + escapeAttr(m.medida) + '"></td>' +
+      '<td class="num col-custo"><input type="number" class="campo-custo" value="' + m.custo + '" step="1" min="0"></td>' +
+      '<td class="num col-marcacao"><div class="cel-pct"><input type="number" class="campo-marcacao" value="' + m.marcacao + '" step="1"><span class="sinal">%</span></div></td>' +
+      '<td class="num col-pct"><div class="cel-pct"><input type="number" class="campo-desc-cartao" value="' + m.descCartao + '" step="1"><span class="sinal">%</span></div></td>' +
+      '<td class="num col-pct"><div class="cel-pct"><input type="number" class="campo-desc-avista" value="' + m.descAvista + '" step="1"><span class="sinal">%</span></div></td>' +
+      '<td class="col-conjunto-sel"><select class="campo-conjunto"></select><span class="conjunto-print-label"></span></td>' +
+      '<td class="num"><div class="celula-preco celula-unitario"></div></td>' +
+      '<td class="num"><div class="celula-preco celula-conjunto"></div></td>' +
+      '<td class="col-acao"><button class="btn-remover" title="Remover medida">✕</button></td>' +
+    '</tr>';
+  }
+
+  function linhaProdutoHTML(p){
+    var cor = corCategoria(p.categoria);
+    return '<tr class="linha-produto">' +
+      '<td colspan="6">' +
+        '<div class="cabecalho-produto">' +
+          '<input type="text" class="input-nome-produto" value="' + escapeAttr(p.nome) + '" placeholder="Nome do produto" style="color:' + cor.cor + '">' +
+          '<input type="text" class="input-espec" value="' + escapeAttr(p.especificacao) + '" placeholder="Especificação técnica">' +
+        '</div>' +
+      '</td>' +
+      '<td colspan="2">' +
+        '<span class="garantia-pill">Garantia <input type="text" class="campo-garantia" value="' + escapeAttr(p.garantia) + '"></span>' +
+        '<label class="chk-ehbase"><input type="checkbox" class="campo-ehbase"' + (p.disponivelConjunto ? ' checked' : '') + '> Disponível como conjunto</label>' +
+      '</td>' +
+      '<td class="col-acao"><div class="acoes-produto">' +
+        '<button class="btn-remover btn-add-medida" title="Adicionar medida">+</button>' +
+        '<button class="btn-remover btn-remover-produto" title="Remover produto">✕</button>' +
+      '</div></td>' +
+    '</tr>';
+  }
+
+  function criarGrupoProduto(p){
+    var id = (p && p.id) ? p.id : novoId();
+    p = p || { categoria: "Linha Convencional", nome: "Novo produto", especificacao: "", garantia: "", medidas: [] };
+    var cor = corCategoria(p.categoria);
+    var tbody = document.createElement("tbody");
+    tbody.className = "grupo-produto";
+    tbody.dataset.id = id;
+    tbody.dataset.categoria = p.categoria;
+    tbody.style.setProperty("--cat-cor", cor.cor);
+    tbody.insertAdjacentHTML("beforeend", linhaProdutoHTML(p));
+    tabelaProdutos.appendChild(tbody);
+
+    var linhaProd = tbody.querySelector(".linha-produto");
+    linhaProd.querySelector(".input-nome-produto").addEventListener("input", salvar);
+    linhaProd.querySelector(".input-espec").addEventListener("input", salvar);
+    linhaProd.querySelector(".campo-garantia").addEventListener("input", salvar);
+    linhaProd.querySelector(".campo-ehbase").addEventListener("change", function(){
+      atualizarSeletoresConjunto(); recalcularTudoProdutos(); salvar();
+    });
+    linhaProd.querySelector(".btn-remover-produto").addEventListener("click", function(){
+      tbody.remove(); atualizarFaixasCategoria(); atualizarLegenda();
+      atualizarSeletoresConjunto(); recalcularTudoProdutos(); salvar();
+    });
+    linhaProd.querySelector(".btn-add-medida").addEventListener("click", function(){
+      adicionarMedida(tbody); atualizarSeletoresConjunto(); salvar();
+    });
+
+    var medidas = (p.medidas && p.medidas.length) ? p.medidas : [{ medida: "Casal", custo: 0,
+      marcacao: parseFloat(document.getElementById("padraoMarcacao").value) || 0,
+      descCartao: parseFloat(document.getElementById("padraoCartao").value) || 0,
+      descAvista: parseFloat(document.getElementById("padraoAvista").value) || 0, baseId: "" }];
+    medidas.forEach(function(m){ adicionarMedida(tbody, m); });
+
+    return tbody;
+  }
+
+  function adicionarMedida(tbody, m){
+    var id = (m && m.id) ? m.id : novoId();
+    m = m || { medida: "Nova medida", custo: 0,
+      marcacao: parseFloat(document.getElementById("padraoMarcacao").value) || 0,
+      descCartao: parseFloat(document.getElementById("padraoCartao").value) || 0,
+      descAvista: parseFloat(document.getElementById("padraoAvista").value) || 0, baseId: "" };
+    tbody.insertAdjacentHTML("beforeend", linhaMedidaHTML(m, id));
+    var tr = tbody.lastElementChild;
+
+    tr.querySelector(".campo-medida").addEventListener("input", salvar);
+    ["campo-custo","campo-marcacao","campo-desc-cartao","campo-desc-avista"].forEach(function(cls){
+      tr.querySelector("." + cls).addEventListener("input", function(){ recalcularLinhaMedida(tr); salvar(); });
+    });
+    tr.querySelector(".campo-conjunto").addEventListener("change", function(e){
+      tr.dataset.baseId = e.target.value;
+      recalcularLinhaMedida(tr); salvar();
+    });
+    tr.querySelector(".btn-remover").addEventListener("click", function(){
+      tr.remove(); salvar();
+    });
+    preencherSeletorConjunto(tr);
+    recalcularLinhaMedida(tr);
+  }
+
+  function preencherSeletorConjunto(tr){
+    var mapaBases = mapaBasesAtual();
+    var meuProdutoId = tr.closest("tbody.grupo-produto") ? tr.closest("tbody.grupo-produto").dataset.id : null;
+    var select = tr.querySelector(".campo-conjunto");
+    var valorDesejado = tr.dataset.baseId || "";
+    var optionsHtml = '<option value="">— Somente colchão —</option>';
+    var existe = false;
+    Object.keys(mapaBases).forEach(function(baseRowId){
+      var b = mapaBases[baseRowId];
+      if(String(b.produtoId) === String(meuProdutoId)) return; // não combina com ele mesmo
+      if(String(baseRowId) === String(valorDesejado)) existe = true;
+      optionsHtml += '<option value="' + baseRowId + '">' + escapeAttr(b.nome) + '</option>';
+    });
+    select.innerHTML = optionsHtml;
+    select.value = existe ? valorDesejado : "";
+    tr.dataset.baseId = select.value;
+  }
+
+  function atualizarSeletoresConjunto(){
+    tabelaProdutos.querySelectorAll("tr.linha-medida").forEach(preencherSeletorConjunto);
+  }
+
+  function linhaPrecoHTML(valor, cartao, avista){
+    return '<span class="preco-principal">' + fmt.format(valor) + '</span>' +
+      '<span class="preco-secundario"><span class="chip">Cartão ' + fmt.format(cartao) + '</span><span class="chip">À vista ' + fmt.format(avista) + '</span></span>';
+  }
+
+  function recalcularLinhaMedida(tr){
+    var custo = parseFloat(tr.querySelector(".campo-custo").value) || 0;
+    var marcacao = parseFloat(tr.querySelector(".campo-marcacao").value) || 0;
+    var descCartao = parseFloat(tr.querySelector(".campo-desc-cartao").value) || 0;
+    var descAvista = parseFloat(tr.querySelector(".campo-desc-avista").value) || 0;
+    var baseId = tr.querySelector(".campo-conjunto").value;
+    var mapaBases = mapaBasesAtual();
+    var base = baseId && mapaBases[baseId] ? mapaBases[baseId] : null;
+
+    var precoCheioUnit = custo * (1 + marcacao / 100);
+    var cartaoUnit = precoCheioUnit * (1 - descCartao / 100);
+    var avistaUnit = precoCheioUnit * (1 - descAvista / 100);
+
+    var celUnit = tr.querySelector(".celula-unitario");
+    var celConj = tr.querySelector(".celula-conjunto");
+    var rotuloPrint = tr.querySelector(".conjunto-print-label");
+
+    celUnit.innerHTML = linhaPrecoHTML(precoCheioUnit, cartaoUnit, avistaUnit);
+
+    if(base){
+      var precoCheioConj = precoCheioUnit + base.precoCheio;
+      var cartaoConj = precoCheioConj * (1 - descCartao / 100);
+      var avistaConj = precoCheioConj * (1 - descAvista / 100);
+      celConj.innerHTML = linhaPrecoHTML(precoCheioConj, cartaoConj, avistaConj);
+      rotuloPrint.textContent = "Conjunto com: " + base.nome;
+    } else {
+      celConj.innerHTML = '<span class="sem-conjunto">sem conjunto</span>';
+      rotuloPrint.textContent = "Somente colchão";
+    }
+  }
+
+  function recalcularTudoProdutos(){
+    tabelaProdutos.querySelectorAll("tr.linha-medida").forEach(recalcularLinhaMedida);
+  }
+
+  function coletarProdutos(){
+    var lista = [];
+    tabelaProdutos.querySelectorAll("tbody.grupo-produto").forEach(function(tbody){
+      var linhaProd = tbody.querySelector(".linha-produto");
+      var medidas = [];
+      tbody.querySelectorAll(".linha-medida").forEach(function(tr){
+        medidas.push({
+          id: tr.dataset.id,
+          medida: tr.querySelector(".campo-medida").value,
+          custo: parseFloat(tr.querySelector(".campo-custo").value) || 0,
+          marcacao: parseFloat(tr.querySelector(".campo-marcacao").value) || 0,
+          descCartao: parseFloat(tr.querySelector(".campo-desc-cartao").value) || 0,
+          descAvista: parseFloat(tr.querySelector(".campo-desc-avista").value) || 0,
+          baseId: tr.querySelector(".campo-conjunto").value
+        });
+      });
+      lista.push({
+        id: tbody.dataset.id,
+        categoria: tbody.dataset.categoria || "",
+        nome: linhaProd.querySelector(".input-nome-produto").value,
+        especificacao: linhaProd.querySelector(".input-espec").value,
+        garantia: linhaProd.querySelector(".campo-garantia").value,
+        disponivelConjunto: linhaProd.querySelector(".campo-ehbase").checked,
+        medidas: medidas
+      });
+    });
+    return lista;
+  }
+
+  /* ---------------- Faixas de categoria (divisórias) ---------------- */
+  function atualizarFaixasCategoria(){
+    tabelaProdutos.querySelectorAll("tbody.faixa-categoria-grupo").forEach(function(el){ el.remove(); });
+    var grupos = Array.prototype.slice.call(tabelaProdutos.querySelectorAll("tbody.grupo-produto"));
+    var ultimaCategoria = null;
+    grupos.forEach(function(g){
+      var cat = (g.dataset.categoria || "").trim();
+      if(cat !== ultimaCategoria){
+        var cor = corCategoria(cat || "Sem categoria");
+        var divisor = document.createElement("tbody");
+        divisor.className = "faixa-categoria-grupo";
+        divisor.innerHTML = '<tr class="faixa-categoria" style="background:' + cor.bg + ';color:' + cor.cor + '"><td colspan="9">' + escapeAttr(cat || "Sem categoria") + '</td></tr>';
+        tabelaProdutos.insertBefore(divisor, g);
+        ultimaCategoria = cat;
+      }
+    });
+  }
+
+  function atualizarLegenda(){
+    var vistos = {};
+    var html = "";
+    tabelaProdutos.querySelectorAll("tbody.grupo-produto").forEach(function(g){
+      var nome = (g.dataset.categoria || "").trim();
+      if(!nome || vistos[nome]) return;
+      vistos[nome] = true;
+      var cor = corCategoria(nome);
+      html += '<span class="pill-cat" style="background:' + cor.bg + ';color:' + cor.cor + '">' + escapeAttr(nome) + '</span>';
+    });
+    legendaCategorias.innerHTML = html;
+  }
+
+  /* ---------------- Início ---------------- */
+  function montarTabela(dados){
+    tabelaProdutos.querySelectorAll("tbody").forEach(function(el){ el.remove(); }); // limpa antes de montar (ex: reload de dados)
+    if(dados.padrao){
+      document.getElementById("padraoMarcacao").value = dados.padrao.marcacao;
+      document.getElementById("padraoCartao").value = dados.padrao.cartao;
+      document.getElementById("padraoAvista").value = dados.padrao.avista;
+    }
+    dados.produtos.forEach(function(p){ criarGrupoProduto(p); });
+    atualizarSeletoresConjunto();
+    recalcularTudoProdutos();
+    atualizarFaixasCategoria();
+    atualizarLegenda();
+  }
+
+  function novoProduto(){
+    var ultimaCategoria = "Linha Convencional";
+    var grupos = tabelaProdutos.querySelectorAll("tbody.grupo-produto");
+    if(grupos.length) ultimaCategoria = grupos[grupos.length - 1].dataset.categoria || ultimaCategoria;
+    var nomeCat = prompt("Categoria/linha deste produto:", ultimaCategoria);
+    if(nomeCat === null) return;
+    criarGrupoProduto({ categoria: nomeCat, nome: "Novo produto", especificacao: "", garantia: "", medidas: [] });
+    atualizarSeletoresConjunto();
+    recalcularTudoProdutos();
+    atualizarFaixasCategoria();
+    atualizarLegenda();
+    salvar();
+  }
+
+  function ligarBotoes(){
+    document.getElementById("btnAdicionarProduto").addEventListener("click", novoProduto);
+    document.getElementById("btnAdicionarProdutoRodape").addEventListener("click", novoProduto);
+
+    document.getElementById("btnAplicarPadrao").addEventListener("click", function(){
+      var marcacao = document.getElementById("padraoMarcacao").value;
+      var cartao = document.getElementById("padraoCartao").value;
+      var avista = document.getElementById("padraoAvista").value;
+      tabelaProdutos.querySelectorAll("tr.linha-medida").forEach(function(tr){
+        tr.querySelector(".campo-marcacao").value = marcacao;
+        tr.querySelector(".campo-desc-cartao").value = cartao;
+        tr.querySelector(".campo-desc-avista").value = avista;
+      });
+      recalcularTudoProdutos();
+      salvar();
+    });
+
+    ["padraoMarcacao","padraoCartao","padraoAvista"].forEach(function(id){
+      document.getElementById(id).addEventListener("input", salvar);
+    });
+
+    document.getElementById("btnPdf").addEventListener("click", function(){ window.print(); });
+
+    document.getElementById("btnSair").addEventListener("click", async function(){
+      if(supa) await supa.auth.signOut();
+      location.reload();
+    });
+
+    document.getElementById("formLogin").addEventListener("submit", async function(e){
+      e.preventDefault();
+      var erroEl = document.getElementById("erroLogin");
+      erroEl.textContent = "";
+      if(!supa){
+        erroEl.textContent = "Configure SUPABASE_URL e SUPABASE_ANON_KEY no início do código antes de usar o login.";
+        return;
+      }
+      var email = document.getElementById("loginEmail").value.trim();
+      var senha = document.getElementById("loginSenha").value;
+      var btnEntrar = document.getElementById("btnEntrar");
+      btnEntrar.disabled = true;
+      btnEntrar.textContent = "Entrando…";
+      var resp = await supa.auth.signInWithPassword({ email: email, password: senha });
+      btnEntrar.disabled = false;
+      btnEntrar.textContent = "Entrar";
+      if(resp.error){
+        erroEl.textContent = "E-mail ou senha inválidos.";
+        return;
+      }
+      entrarComSessao(resp.data.session);
+    });
+  }
+
+  async function entrarComSessao(session){
+    sessaoAtual = session;
+    document.getElementById("telaLogin").classList.add("oculto");
+    document.getElementById("app").classList.remove("app-oculto");
+    document.getElementById("emailLogado").textContent = session.user.email;
+
+    statusSync("Carregando…", "");
+    try{
+      var dados = await carregarDoSupabase();
+      montarTabela(dados);
+      statusSync("Sincronizado ✓", "ok");
+    }catch(err){
+      console.error("Erro ao carregar do Supabase, usando cache local:", err);
+      statusSync("Sem conexão — usando cache local", "erro");
+      montarTabela(carregarLocal());
+    }
+  }
+
+  async function checarSessaoInicial(){
+    if(!supa){
+      // Sem SUPABASE_URL/ANON_KEY configurados: pula o login e usa só o cache local do navegador.
+      document.getElementById("telaLogin").classList.add("oculto");
+      document.getElementById("app").classList.remove("app-oculto");
+      montarTabela(carregarLocal());
+      return;
+    }
+    var resp = await supa.auth.getSession();
+    if(resp.data && resp.data.session){
+      entrarComSessao(resp.data.session);
+    }
+    // sem sessão válida: a tela de login (já visível por padrão) permanece na tela.
+  }
+
+  var sessaoAtual = null;
+  ligarBotoes();
+  checarSessaoInicial();
+})();
+</script>
+</body>
+</html>
