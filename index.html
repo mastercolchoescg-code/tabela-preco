@@ -46,6 +46,29 @@
   #statusSync.ok{ color:var(--verde); }
   #statusSync.erro{ color:#b3261e; }
 
+  /* ---------- Modal de cadastro de produto ---------- */
+  #modalProduto{ position:fixed; inset:0; background:rgba(11,37,64,.55); display:flex; align-items:center; justify-content:center; z-index:90; padding:20px; }
+  #modalProduto.oculto{ display:none; }
+  .caixa-modal{ background:#fff; border-radius:18px; box-shadow:var(--sombra); padding:24px 26px; width:100%; max-width:620px; max-height:90vh; overflow-y:auto; }
+  .cabecalho-modal{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .cabecalho-modal h2{ font-family:'Manrope',sans-serif; font-weight:800; font-size:18px; margin:0; color:var(--azul-900); }
+  .btn-fechar-modal{ width:30px; height:30px; border-radius:8px; background:var(--azul-050); color:var(--texto-suave); font-size:15px; display:flex; align-items:center; justify-content:center; }
+  .btn-fechar-modal:hover{ background:var(--azul-100); color:var(--azul-800); }
+  .grade-modal{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:6px; }
+  .grade-modal .campo-largo{ grid-column:1 / -1; }
+  .grade-modal .campo label, .campo-base-conjunto label{ display:block; margin-bottom:6px; font-size:12px; font-weight:600; color:var(--texto-suave); }
+  .grade-modal .campo input, .grade-modal .campo select, .campo-base-conjunto select{ width:100%; padding:10px 11px; border:1.5px solid var(--linha); border-radius:9px; font-size:14px; color:var(--texto); background:var(--azul-050); }
+  .grade-modal .campo input:focus, .grade-modal .campo select:focus, .campo-base-conjunto select:focus{ outline:2px solid var(--azul-700); outline-offset:1px; background:#fff; }
+  .linha-check{ display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; color:var(--texto); margin:12px 0; cursor:pointer; }
+  .linha-check input{ width:16px; height:16px; accent-color:var(--azul-700); cursor:pointer; }
+  .campo-base-conjunto{ margin:0 0 10px; }
+  .campo-base-conjunto.oculto{ display:none; }
+  .rodape-modal{ display:flex; justify-content:flex-end; gap:10px; margin-top:18px; padding-top:16px; border-top:1px solid var(--linha); }
+
+  @media (max-width: 560px){
+    .grade-modal{ grid-template-columns:1fr; }
+  }
+
   /* ---------- Header ---------- */
   .topo{ display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:22px; }
   .marca{ display:flex; flex-direction:column; gap:4px; }
@@ -211,6 +234,72 @@
       </div>
       <button type="submit" class="btn btn-primaria" id="btnEntrar">Entrar</button>
       <p class="erro-login" id="erroLogin"></p>
+    </form>
+  </div>
+</div>
+
+<div id="modalProduto" class="oculto">
+  <div class="caixa-modal">
+    <div class="cabecalho-modal">
+      <h2>Cadastrar produto</h2>
+      <button type="button" class="btn-fechar-modal" id="btnFecharModal" title="Fechar">✕</button>
+    </div>
+    <form id="formProduto">
+      <div class="grade-modal">
+        <div class="campo">
+          <label for="modalCategoriaSelect">Linha / Categoria já cadastrada</label>
+          <select id="modalCategoriaSelect"><option value="">— selecione —</option></select>
+        </div>
+        <div class="campo">
+          <label for="modalCategoriaNova">Ou nova linha/categoria</label>
+          <input type="text" id="modalCategoriaNova" placeholder="ex: Linha Alta">
+        </div>
+        <div class="campo campo-largo">
+          <label for="modalNome">Descrição do produto</label>
+          <input type="text" id="modalNome" placeholder="ex: D45 Ortopédico" required>
+        </div>
+        <div class="campo">
+          <label for="modalMedida">Medida</label>
+          <input type="text" id="modalMedida" placeholder="ex: Casal 138x188x28" required>
+        </div>
+        <div class="campo">
+          <label for="modalGarantia">Garantia</label>
+          <input type="text" id="modalGarantia" placeholder="ex: 1 ano">
+        </div>
+        <div class="campo campo-largo">
+          <label for="modalCaracteristica">Breve característica</label>
+          <input type="text" id="modalCaracteristica" placeholder="ex: Espuma D45 · até 150kg">
+        </div>
+        <div class="campo">
+          <label for="modalCusto">Custo (R$)</label>
+          <input type="number" id="modalCusto" step="0.01" min="0" value="0" required>
+        </div>
+        <div class="campo">
+          <label for="modalMarkup">Markup / Marcação (%)</label>
+          <input type="number" id="modalMarkup" step="1" value="90" required>
+        </div>
+        <div class="campo">
+          <label for="modalDescCartao">Desconto no cartão (%)</label>
+          <input type="number" id="modalDescCartao" step="1" value="5" required>
+        </div>
+        <div class="campo">
+          <label for="modalDescAvista">Desconto à vista (%)</label>
+          <input type="number" id="modalDescAvista" step="1" value="15" required>
+        </div>
+      </div>
+
+      <label class="linha-check"><input type="checkbox" id="modalEhBase"> Este produto pode ser usado como conjunto de outro (ex: é uma base)</label>
+
+      <label class="linha-check"><input type="checkbox" id="modalVendeConjunto"> Vende esse produto também em conjunto</label>
+      <div class="campo campo-base-conjunto oculto" id="blocoBaseConjunto">
+        <label for="modalBaseConjunto">Selecione a base já cadastrada</label>
+        <select id="modalBaseConjunto"><option value="">— nenhuma base cadastrada —</option></select>
+      </div>
+
+      <div class="rodape-modal">
+        <button type="button" class="btn btn-secundaria" id="btnCancelarModal">Cancelar</button>
+        <button type="submit" class="btn btn-primaria">Confirmar cadastro</button>
+      </div>
     </form>
   </div>
 </div>
@@ -730,23 +819,94 @@
     atualizarLegenda();
   }
 
-  function novoProduto(){
-    var ultimaCategoria = "Linha Convencional";
-    var grupos = tabelaProdutos.querySelectorAll("tbody.grupo-produto");
-    if(grupos.length) ultimaCategoria = grupos[grupos.length - 1].dataset.categoria || ultimaCategoria;
-    var nomeCat = prompt("Categoria/linha deste produto:", ultimaCategoria);
-    if(nomeCat === null) return;
-    criarGrupoProduto({ categoria: nomeCat, nome: "Novo produto", especificacao: "", garantia: "", medidas: [] });
-    atualizarSeletoresConjunto();
-    recalcularTudoProdutos();
-    atualizarFaixasCategoria();
-    atualizarLegenda();
-    salvar();
+  /* ---------------- Modal de cadastro de produto ---------------- */
+  var modalProduto = document.getElementById("modalProduto");
+  var formProduto = document.getElementById("formProduto");
+
+  function categoriasExistentes(){
+    var vistas = {};
+    var lista = [];
+    tabelaProdutos.querySelectorAll("tbody.grupo-produto").forEach(function(g){
+      var cat = (g.dataset.categoria || "").trim();
+      if(cat && !vistas[cat]){ vistas[cat] = true; lista.push(cat); }
+    });
+    return lista;
+  }
+
+  function abrirModalProduto(){
+    // popula linhas já cadastradas
+    var selectCat = document.getElementById("modalCategoriaSelect");
+    selectCat.innerHTML = '<option value="">— selecione —</option>';
+    categoriasExistentes().forEach(function(cat){
+      selectCat.innerHTML += '<option value="' + escapeAttr(cat) + '">' + escapeAttr(cat) + '</option>';
+    });
+
+    // popula bases já cadastradas (produtos marcados "disponível como conjunto")
+    var selectBase = document.getElementById("modalBaseConjunto");
+    var mapaBases = mapaBasesAtual();
+    var chaves = Object.keys(mapaBases);
+    selectBase.innerHTML = chaves.length ? '<option value="">— selecione —</option>' : '<option value="">— nenhuma base cadastrada —</option>';
+    chaves.forEach(function(baseRowId){
+      selectBase.innerHTML += '<option value="' + baseRowId + '">' + escapeAttr(mapaBases[baseRowId].nome) + '</option>';
+    });
+
+    document.getElementById("blocoBaseConjunto").classList.add("oculto");
+    document.getElementById("modalVendeConjunto").checked = false;
+    document.getElementById("modalEhBase").checked = false;
+    modalProduto.classList.remove("oculto");
+    document.getElementById("modalCategoriaSelect").focus();
+  }
+
+  function fecharModalProduto(){
+    modalProduto.classList.add("oculto");
+    formProduto.reset();
+    document.getElementById("blocoBaseConjunto").classList.add("oculto");
   }
 
   function ligarBotoes(){
-    document.getElementById("btnAdicionarProduto").addEventListener("click", novoProduto);
-    document.getElementById("btnAdicionarProdutoRodape").addEventListener("click", novoProduto);
+    document.getElementById("btnAdicionarProduto").addEventListener("click", abrirModalProduto);
+    document.getElementById("btnAdicionarProdutoRodape").addEventListener("click", abrirModalProduto);
+    document.getElementById("btnFecharModal").addEventListener("click", fecharModalProduto);
+    document.getElementById("btnCancelarModal").addEventListener("click", fecharModalProduto);
+    modalProduto.addEventListener("click", function(e){ if(e.target === modalProduto) fecharModalProduto(); });
+
+    document.getElementById("modalVendeConjunto").addEventListener("change", function(e){
+      document.getElementById("blocoBaseConjunto").classList.toggle("oculto", !e.target.checked);
+    });
+
+    formProduto.addEventListener("submit", function(e){
+      e.preventDefault();
+      var categoria = document.getElementById("modalCategoriaNova").value.trim()
+        || document.getElementById("modalCategoriaSelect").value.trim();
+      if(!categoria){ alert("Selecione uma linha/categoria já cadastrada ou digite uma nova."); return; }
+
+      var vendeConjunto = document.getElementById("modalVendeConjunto").checked;
+      var baseId = vendeConjunto ? document.getElementById("modalBaseConjunto").value : "";
+
+      var p = {
+        categoria: categoria,
+        nome: document.getElementById("modalNome").value.trim() || "Novo produto",
+        especificacao: document.getElementById("modalCaracteristica").value.trim(),
+        garantia: document.getElementById("modalGarantia").value.trim(),
+        disponivelConjunto: document.getElementById("modalEhBase").checked,
+        medidas: [{
+          medida: document.getElementById("modalMedida").value.trim() || "Casal",
+          custo: parseFloat(document.getElementById("modalCusto").value) || 0,
+          marcacao: parseFloat(document.getElementById("modalMarkup").value) || 0,
+          descCartao: parseFloat(document.getElementById("modalDescCartao").value) || 0,
+          descAvista: parseFloat(document.getElementById("modalDescAvista").value) || 0,
+          baseId: baseId
+        }]
+      };
+
+      criarGrupoProduto(p);
+      atualizarSeletoresConjunto();
+      recalcularTudoProdutos();
+      atualizarFaixasCategoria();
+      atualizarLegenda();
+      salvar();
+      fecharModalProduto();
+    });
 
     document.getElementById("btnAplicarPadrao").addEventListener("click", function(){
       var marcacao = document.getElementById("padraoMarcacao").value;
