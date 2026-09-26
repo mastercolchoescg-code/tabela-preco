@@ -148,6 +148,10 @@
   .chk-ehbase{ display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:600; color:var(--roxo); background:var(--roxo-bg); padding:3px 8px; border-radius:999px; margin-left:8px; cursor:pointer; white-space:nowrap; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .chk-ehbase input{ margin:0; accent-color:var(--roxo); cursor:pointer; }
   .acoes-produto{ display:flex; align-items:center; gap:4px; margin-left:auto; }
+  .acoes-medida{ display:flex; align-items:center; gap:3px; justify-content:flex-end; }
+  .acoes-faixa{ display:flex; align-items:center; gap:4px; justify-content:flex-end; }
+  .acoes-faixa .btn-remover, .acoes-medida .btn-remover{ background:rgba(255,255,255,.5); }
+  tr.faixa-categoria .acoes-faixa .btn-remover:hover{ background:#fff; }
 
   tr.linha-medida td{ padding:6px 14px; }
   tr.linha-medida:nth-of-type(odd){ background:#fbfcfe; }
@@ -247,12 +251,12 @@
     <form id="formProduto">
       <div class="grade-modal">
         <div class="campo">
-          <label for="modalCategoriaSelect">Linha / Categoria já cadastrada</label>
+          <label for="modalCategoriaSelect">Linha já cadastrada</label>
           <select id="modalCategoriaSelect"><option value="">— selecione —</option></select>
         </div>
         <div class="campo">
-          <label for="modalCategoriaNova">Ou nova linha/categoria</label>
-          <input type="text" id="modalCategoriaNova" placeholder="ex: Linha Alta">
+          <label for="modalCategoriaNova">Criar linha nova (deixe o campo ao lado em "— selecione —")</label>
+          <input type="text" id="modalCategoriaNova" placeholder="digite aqui o nome da linha nova, ex: Linha Alta">
         </div>
         <div class="campo campo-largo">
           <label for="modalNome">Descrição do produto</label>
@@ -598,7 +602,11 @@
       '<td class="col-conjunto-sel"><select class="campo-conjunto"></select><span class="conjunto-print-label"></span></td>' +
       '<td class="num"><div class="celula-preco celula-unitario"></div></td>' +
       '<td class="num"><div class="celula-preco celula-conjunto"></div></td>' +
-      '<td class="col-acao"><button class="btn-remover" title="Remover medida">✕</button></td>' +
+      '<td class="col-acao"><div class="acoes-medida">' +
+        '<button class="btn-remover btn-mover-medida-cima" title="Mover medida pra cima">▲</button>' +
+        '<button class="btn-remover btn-mover-medida-baixo" title="Mover medida pra baixo">▼</button>' +
+        '<button class="btn-remover btn-remover-medida" title="Remover medida">✕</button>' +
+      '</div></td>' +
     '</tr>';
   }
 
@@ -616,6 +624,8 @@
         '<label class="chk-ehbase"><input type="checkbox" class="campo-ehbase"' + (p.disponivelConjunto ? ' checked' : '') + '> Disponível como conjunto</label>' +
       '</td>' +
       '<td class="col-acao"><div class="acoes-produto">' +
+        '<button class="btn-remover btn-mover-produto-cima" title="Mover produto pra cima na linha">▲</button>' +
+        '<button class="btn-remover btn-mover-produto-baixo" title="Mover produto pra baixo na linha">▼</button>' +
         '<button class="btn-remover btn-add-medida" title="Adicionar medida">+</button>' +
         '<button class="btn-remover btn-remover-produto" title="Remover produto">✕</button>' +
       '</div></td>' +
@@ -632,7 +642,19 @@
     tbody.dataset.categoria = p.categoria;
     tbody.style.setProperty("--cat-cor", cor.cor);
     tbody.insertAdjacentHTML("beforeend", linhaProdutoHTML(p));
-    tabelaProdutos.appendChild(tbody);
+
+    // insere logo após o último produto já existente da mesma categoria, pra não
+    // "quebrar" o agrupamento quando um produto é cadastrado fora de ordem
+    var gruposExistentes = tabelaProdutos.querySelectorAll("tbody.grupo-produto");
+    var ultimoDaCategoria = null;
+    gruposExistentes.forEach(function(g){
+      if((g.dataset.categoria || "") === (p.categoria || "")) ultimoDaCategoria = g;
+    });
+    if(ultimoDaCategoria){
+      tabelaProdutos.insertBefore(tbody, ultimoDaCategoria.nextSibling);
+    } else {
+      tabelaProdutos.appendChild(tbody);
+    }
 
     var linhaProd = tbody.querySelector(".linha-produto");
     linhaProd.querySelector(".input-nome-produto").addEventListener("input", salvar);
@@ -647,6 +669,12 @@
     });
     linhaProd.querySelector(".btn-add-medida").addEventListener("click", function(){
       adicionarMedida(tbody); atualizarSeletoresConjunto(); salvar();
+    });
+    linhaProd.querySelector(".btn-mover-produto-cima").addEventListener("click", function(){
+      moverProdutoNaCategoria(tbody, -1);
+    });
+    linhaProd.querySelector(".btn-mover-produto-baixo").addEventListener("click", function(){
+      moverProdutoNaCategoria(tbody, 1);
     });
 
     var medidas = (p.medidas && p.medidas.length) ? p.medidas : [{ medida: "Casal", custo: 0,
@@ -675,11 +703,73 @@
       tr.dataset.baseId = e.target.value;
       recalcularLinhaMedida(tr); salvar();
     });
-    tr.querySelector(".btn-remover").addEventListener("click", function(){
+    tr.querySelector(".btn-remover-medida").addEventListener("click", function(){
       tr.remove(); salvar();
+    });
+    tr.querySelector(".btn-mover-medida-cima").addEventListener("click", function(){
+      moverMedida(tr, -1);
+    });
+    tr.querySelector(".btn-mover-medida-baixo").addEventListener("click", function(){
+      moverMedida(tr, 1);
     });
     preencherSeletorConjunto(tr);
     recalcularLinhaMedida(tr);
+  }
+
+  function moverMedida(tr, direcao){
+    var tbody = tr.closest("tbody.grupo-produto");
+    if(!tbody) return;
+    var linhas = Array.prototype.slice.call(tbody.querySelectorAll("tr.linha-medida"));
+    var idx = linhas.indexOf(tr);
+    var alvoIdx = idx + direcao;
+    if(alvoIdx < 0 || alvoIdx >= linhas.length) return;
+    if(direcao < 0) tbody.insertBefore(tr, linhas[alvoIdx]);
+    else tbody.insertBefore(linhas[alvoIdx], tr);
+    salvar();
+  }
+
+  function moverProdutoNaCategoria(tbody, direcao){
+    tabelaProdutos.querySelectorAll("tbody.faixa-categoria-grupo").forEach(function(el){ el.remove(); });
+    var categoria = tbody.dataset.categoria || "";
+    var grupos = Array.prototype.slice.call(tabelaProdutos.querySelectorAll("tbody.grupo-produto"));
+    var idx = grupos.indexOf(tbody);
+    var alvoIdx = idx + direcao;
+    if(alvoIdx < 0 || alvoIdx >= grupos.length || (grupos[alvoIdx].dataset.categoria || "") !== categoria){
+      atualizarFaixasCategoria();
+      return; // já está no limite da própria linha/categoria
+    }
+    if(direcao < 0) tabelaProdutos.insertBefore(tbody, grupos[alvoIdx]);
+    else tabelaProdutos.insertBefore(grupos[alvoIdx], tbody);
+    atualizarFaixasCategoria();
+    salvar();
+  }
+
+  function blocosPorCategoria(){
+    var grupos = Array.prototype.slice.call(tabelaProdutos.querySelectorAll("tbody.grupo-produto"));
+    var blocos = [];
+    grupos.forEach(function(g){
+      var cat = g.dataset.categoria || "";
+      var ultimo = blocos[blocos.length - 1];
+      if(ultimo && ultimo.categoria === cat) ultimo.tbodies.push(g);
+      else blocos.push({ categoria: cat, tbodies: [g] });
+    });
+    return blocos;
+  }
+
+  function moverCategoria(categoria, direcao){
+    tabelaProdutos.querySelectorAll("tbody.faixa-categoria-grupo").forEach(function(el){ el.remove(); });
+    var blocos = blocosPorCategoria();
+    var idx = blocos.findIndex(function(b){ return b.categoria === categoria; });
+    if(idx === -1){ atualizarFaixasCategoria(); return; }
+    var alvo = idx + direcao;
+    if(alvo < 0 || alvo >= blocos.length){ atualizarFaixasCategoria(); return; }
+    var novaOrdem = blocos.slice();
+    var tmp = novaOrdem[idx]; novaOrdem[idx] = novaOrdem[alvo]; novaOrdem[alvo] = tmp;
+    novaOrdem.forEach(function(bloco){
+      bloco.tbodies.forEach(function(tb){ tabelaProdutos.appendChild(tb); });
+    });
+    atualizarFaixasCategoria();
+    salvar();
   }
 
   function preencherSeletorConjunto(tr){
@@ -784,7 +874,16 @@
         var cor = corCategoria(cat || "Sem categoria");
         var divisor = document.createElement("tbody");
         divisor.className = "faixa-categoria-grupo";
-        divisor.innerHTML = '<tr class="faixa-categoria" style="background:' + cor.bg + ';color:' + cor.cor + '"><td colspan="9">' + escapeAttr(cat || "Sem categoria") + '</td></tr>';
+        divisor.innerHTML = '<tr class="faixa-categoria" style="background:' + cor.bg + ';color:' + cor.cor + '">' +
+          '<td colspan="8">' + escapeAttr(cat || "Sem categoria") + '</td>' +
+          '<td class="col-acao acoes-faixa">' +
+            '<button class="btn-remover btn-mover-cat-cima" title="Mover linha inteira pra cima">▲</button>' +
+            '<button class="btn-remover btn-mover-cat-baixo" title="Mover linha inteira pra baixo">▼</button>' +
+          '</td>' +
+        '</tr>';
+        var catFechada = cat;
+        divisor.querySelector(".btn-mover-cat-cima").addEventListener("click", function(){ moverCategoria(catFechada, -1); });
+        divisor.querySelector(".btn-mover-cat-baixo").addEventListener("click", function(){ moverCategoria(catFechada, 1); });
         tabelaProdutos.insertBefore(divisor, g);
         ultimaCategoria = cat;
       }
@@ -872,6 +971,14 @@
 
     document.getElementById("modalVendeConjunto").addEventListener("change", function(e){
       document.getElementById("blocoBaseConjunto").classList.toggle("oculto", !e.target.checked);
+    });
+
+    // campos "linha já cadastrada" x "criar linha nova" se excluem — escolher um limpa o outro
+    document.getElementById("modalCategoriaSelect").addEventListener("change", function(e){
+      if(e.target.value) document.getElementById("modalCategoriaNova").value = "";
+    });
+    document.getElementById("modalCategoriaNova").addEventListener("input", function(e){
+      if(e.target.value) document.getElementById("modalCategoriaSelect").value = "";
     });
 
     formProduto.addEventListener("submit", function(e){
