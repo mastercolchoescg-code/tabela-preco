@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Catálogo de Preços — Master Colchões</title>
+<title>Catálogo de Preços</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -39,6 +39,11 @@
   .caixa-login .campo input:focus{ outline:2px solid var(--azul-700); outline-offset:1px; background:#fff; }
   .caixa-login .btn-primaria{ width:100%; justify-content:center; margin-top:4px; }
   .erro-login{ color:#b3261e; font-size:12.5px; font-weight:600; margin:10px 0 0; min-height:16px; }
+  .erro-login.sucesso{ color:#1a7a4c; }
+  .trocar-modo{ margin:14px 0 0; font-size:13px; color:var(--texto); text-align:center; }
+  .trocar-modo button{ background:none; border:0; padding:0; color:var(--azul-700); font-weight:700; cursor:pointer; text-decoration:underline; font-size:13px; }
+  .caixa-login .campo-cadastro{ display:none; }
+  .caixa-login.modo-cadastro .campo-cadastro{ display:block; }
   .app-oculto{ display:none !important; }
   .barra-conta{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--texto-suave); }
   .barra-conta .email{ font-weight:700; color:var(--azul-800); }
@@ -89,6 +94,8 @@
   .painel{ background:#fff; border:1px solid var(--linha); border-radius:16px; box-shadow:var(--sombra); padding:18px 22px; margin-bottom:20px; }
   .painel h2{ font-family:'Manrope',sans-serif; font-size:13px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--azul-700); margin:0 0 4px; }
   .painel .sub{ font-size:13px; color:var(--texto-suave); margin:0 0 14px; }
+  .campo-loja{ max-width:440px; margin-bottom:16px; }
+  .campo-loja input{ padding:10px 12px; }
   .campos-padrao{ display:grid; grid-template-columns:repeat(3, minmax(150px,1fr)) auto; gap:14px; align-items:end; }
   .campo{ display:flex; flex-direction:column; gap:6px; }
   .campo label{ font-size:12px; font-weight:600; color:var(--texto-suave); }
@@ -224,9 +231,9 @@
 <body>
 
 <div id="telaLogin">
-  <div class="caixa-login">
-    <span class="selo">Master Colchões</span>
-    <h1>Entrar no catálogo de preços</h1>
+  <div class="caixa-login" id="caixaLogin">
+    <span class="selo">Catálogo de Preços</span>
+    <h1 id="tituloLogin">Entrar no catálogo de preços</h1>
     <form id="formLogin">
       <div class="campo">
         <label for="loginEmail">E-mail</label>
@@ -234,11 +241,20 @@
       </div>
       <div class="campo">
         <label for="loginSenha">Senha</label>
-        <input type="password" id="loginSenha" autocomplete="current-password" required>
+        <input type="password" id="loginSenha" autocomplete="current-password" minlength="6" required>
+      </div>
+      <div class="campo campo-cadastro">
+        <label for="loginLoja">Nome da loja / cidade</label>
+        <input type="text" id="loginLoja" placeholder="Ex: Loja X · Jacobina/BA" maxlength="80">
+      </div>
+      <div class="campo campo-cadastro">
+        <label for="loginSenha2">Repita a senha</label>
+        <input type="password" id="loginSenha2" autocomplete="new-password" minlength="6">
       </div>
       <button type="submit" class="btn btn-primaria" id="btnEntrar">Entrar</button>
       <p class="erro-login" id="erroLogin"></p>
     </form>
+    <p class="trocar-modo" id="trocarModo">Ainda não tem conta? <button type="button" id="btnTrocarModo">Criar conta</button></p>
   </div>
 </div>
 
@@ -312,7 +328,7 @@
 
   <div class="topo">
     <div class="marca">
-      <span class="selo">Master Colchões · Capim Grosso/BA</span>
+      <span class="selo" id="seloLoja">Minha loja</span>
       <h1>Catálogo de Preços — Uso Interno</h1>
       <p>Organizado por linha, com preço unitário e de conjunto lado a lado, ficha técnica e garantia.</p>
     </div>
@@ -327,6 +343,10 @@
   <div class="painel">
     <h2>Padrão da tabela</h2>
     <p class="sub">Marcação e descontos padrão. "Aplicar a todas as linhas" atualiza bases e todos os produtos.</p>
+    <div class="campo campo-loja">
+      <label for="padraoLoja">Nome da loja / cidade (aparece no topo e no PDF)</label>
+      <input type="text" id="padraoLoja" placeholder="Ex: Loja X · Cidade/UF" maxlength="80">
+    </div>
     <div class="campos-padrao">
       <div class="campo">
         <label for="padraoMarcacao">Marcação sobre o custo</label>
@@ -361,7 +381,7 @@
     </div>
   </div>
 
-  <p class="rodape-pagina">Master Colchões — tabela de referência interna. Não compartilhar com clientes.</p>
+  <p class="rodape-pagina"><span id="rodapeLoja">Minha loja</span> — tabela de referência interna. Não compartilhar com clientes.</p>
 </div>
 
 <script>
@@ -446,25 +466,33 @@
   function escapeAttr(s){ return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
 
   /* ---------------- Persistência ---------------- */
+  // cache separado por usuário — assim um usuário nunca vê o cache de outro no mesmo navegador
+  function chaveCache(){
+    return (sessaoAtual && sessaoAtual.user) ? STORAGE_KEY + ":" + sessaoAtual.user.id : STORAGE_KEY;
+  }
+  function uidAtual(){ return sessaoAtual && sessaoAtual.user ? sessaoAtual.user.id : null; }
+
   function carregarLocal(){
     try{
-      var salvo = localStorage.getItem(STORAGE_KEY);
+      var salvo = localStorage.getItem(chaveCache());
       if(salvo){
         var dados = JSON.parse(salvo);
         if(dados && Array.isArray(dados.produtos)) return dados;
       }
     }catch(e){}
-    return { produtos: produtosExemplo.slice() };
+    // logado: começa vazio; sem Supabase (modo offline): mostra os exemplos
+    return { produtos: sessaoAtual ? [] : produtosExemplo.slice() };
   }
 
   function salvar(){
     try{
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      localStorage.setItem(chaveCache(), JSON.stringify({
         produtos: coletarProdutos(),
         padrao: {
           marcacao: document.getElementById("padraoMarcacao").value,
           cartao: document.getElementById("padraoCartao").value,
-          avista: document.getElementById("padraoAvista").value
+          avista: document.getElementById("padraoAvista").value,
+          nomeLoja: document.getElementById("padraoLoja").value
         }
       }));
     }catch(e){}
@@ -490,11 +518,13 @@
   }
 
   async function carregarDoSupabase(){
-    var resProdutos = await supa.from("produtos").select("*").order("categoria").order("ordem");
+    var uid = uidAtual();
+    // o RLS do Supabase já garante que cada usuário só lê o que é dele; o filtro abaixo é reforço
+    var resProdutos = await supa.from("produtos").select("*").eq("user_id", uid).order("categoria").order("ordem");
     if(resProdutos.error) throw resProdutos.error;
-    var resMedidas = await supa.from("medidas").select("*").order("ordem");
+    var resMedidas = await supa.from("medidas").select("*").eq("user_id", uid).order("ordem");
     if(resMedidas.error) throw resMedidas.error;
-    var resConfig = await supa.from("configuracao").select("*").limit(1);
+    var resConfig = await supa.from("configuracao_usuario").select("*").eq("user_id", uid).limit(1);
 
     var porProduto = {};
     (resMedidas.data || []).forEach(function(m){
@@ -519,8 +549,15 @@
       padrao = {
         marcacao: resConfig.data[0].marcacao_padrao,
         cartao: resConfig.data[0].desconto_cartao_padrao,
-        avista: resConfig.data[0].desconto_avista_padrao
+        avista: resConfig.data[0].desconto_avista_padrao,
+        nomeLoja: resConfig.data[0].nome_loja || ""
       };
+    }
+    // conta nova: usa o nome da loja informado no cadastro
+    if(!padrao || !padrao.nomeLoja){
+      var meta = (sessaoAtual.user.user_metadata || {}).nome_loja || "";
+      padrao = padrao || { marcacao: 90, cartao: 5, avista: 15 };
+      padrao.nomeLoja = meta;
     }
     return { produtos: produtos, padrao: padrao };
   }
@@ -528,15 +565,16 @@
   async function sincronizarSupabase(){
     if(!supa || !sessaoAtual) return;
     try{
+      var uid = uidAtual();
       var produtosAtuais = coletarProdutos();
       var produtosRows = produtosAtuais.map(function(p, i){
-        return { id: p.id, categoria: p.categoria, nome: p.nome, especificacao: p.especificacao,
+        return { id: p.id, user_id: uid, categoria: p.categoria, nome: p.nome, especificacao: p.especificacao,
           garantia: p.garantia, disponivel_conjunto: p.disponivelConjunto, ordem: i };
       });
       var medidasRows = [];
       produtosAtuais.forEach(function(p){
         p.medidas.forEach(function(m, i){
-          medidasRows.push({ id: m.id, produto_id: p.id, medida: m.medida, custo: m.custo,
+          medidasRows.push({ id: m.id, user_id: uid, produto_id: p.id, medida: m.medida, custo: m.custo,
             marcacao: m.marcacao, desconto_cartao: m.descCartao, desconto_avista: m.descAvista,
             conjunto_medida_id: m.baseId || null, ordem: i });
         });
@@ -554,11 +592,14 @@
       if(medidasRows.length) { var r2 = await supa.from("medidas").upsert(medidasRows); if(r2.error) throw r2.error; }
       if(produtosRemovidos.length) await supa.from("produtos").delete().in("id", produtosRemovidos);
 
-      await supa.from("configuracao").update({
+      var r3 = await supa.from("configuracao_usuario").upsert({
+        user_id: uid,
         marcacao_padrao: parseFloat(document.getElementById("padraoMarcacao").value) || 0,
         desconto_cartao_padrao: parseFloat(document.getElementById("padraoCartao").value) || 0,
-        desconto_avista_padrao: parseFloat(document.getElementById("padraoAvista").value) || 0
-      }).eq("id", true);
+        desconto_avista_padrao: parseFloat(document.getElementById("padraoAvista").value) || 0,
+        nome_loja: document.getElementById("padraoLoja").value.trim()
+      });
+      if(r3.error) throw r3.error;
 
       idsConhecidos.produtos = idsProdutosAtuais;
       idsConhecidos.medidas = idsMedidasAtuais;
@@ -903,6 +944,13 @@
     legendaCategorias.innerHTML = html;
   }
 
+  function atualizarNomeLoja(){
+    var nome = document.getElementById("padraoLoja").value.trim() || "Minha loja";
+    document.getElementById("seloLoja").textContent = nome;
+    document.getElementById("rodapeLoja").textContent = nome;
+    document.title = "Catálogo de Preços — " + nome;
+  }
+
   /* ---------------- Início ---------------- */
   function montarTabela(dados){
     tabelaProdutos.querySelectorAll("tbody").forEach(function(el){ el.remove(); }); // limpa antes de montar (ex: reload de dados)
@@ -910,7 +958,9 @@
       document.getElementById("padraoMarcacao").value = dados.padrao.marcacao;
       document.getElementById("padraoCartao").value = dados.padrao.cartao;
       document.getElementById("padraoAvista").value = dados.padrao.avista;
+      document.getElementById("padraoLoja").value = dados.padrao.nomeLoja || "";
     }
+    atualizarNomeLoja();
     dados.produtos.forEach(function(p){ criarGrupoProduto(p); });
     atualizarSeletoresConjunto();
     recalcularTudoProdutos();
@@ -1028,6 +1078,8 @@
       salvar();
     });
 
+    document.getElementById("padraoLoja").addEventListener("input", function(){ atualizarNomeLoja(); salvar(); });
+
     ["padraoMarcacao","padraoCartao","padraoAvista"].forEach(function(id){
       document.getElementById(id).addEventListener("input", salvar);
     });
@@ -1039,10 +1091,27 @@
       location.reload();
     });
 
+    // alterna entre "Entrar" e "Criar conta"
+    var modoCadastro = false;
+    function aplicarModo(){
+      document.getElementById("caixaLogin").classList.toggle("modo-cadastro", modoCadastro);
+      document.getElementById("tituloLogin").textContent = modoCadastro ? "Criar sua conta" : "Entrar no catálogo de preços";
+      document.getElementById("btnEntrar").textContent = modoCadastro ? "Criar conta" : "Entrar";
+      document.getElementById("loginSenha").setAttribute("autocomplete", modoCadastro ? "new-password" : "current-password");
+      document.getElementById("loginSenha2").required = modoCadastro;
+      document.getElementById("trocarModo").innerHTML = modoCadastro
+        ? 'Já tem conta? <button type="button" id="btnTrocarModo">Entrar</button>'
+        : 'Ainda não tem conta? <button type="button" id="btnTrocarModo">Criar conta</button>';
+      document.getElementById("btnTrocarModo").addEventListener("click", function(){ modoCadastro = !modoCadastro; aplicarModo(); });
+      var erroEl = document.getElementById("erroLogin");
+      erroEl.textContent = ""; erroEl.className = "erro-login";
+    }
+    aplicarModo();
+
     document.getElementById("formLogin").addEventListener("submit", async function(e){
       e.preventDefault();
       var erroEl = document.getElementById("erroLogin");
-      erroEl.textContent = "";
+      erroEl.textContent = ""; erroEl.className = "erro-login";
       if(!supa){
         erroEl.textContent = "Configure SUPABASE_URL e SUPABASE_ANON_KEY no início do código antes de usar o login.";
         return;
@@ -1050,13 +1119,39 @@
       var email = document.getElementById("loginEmail").value.trim();
       var senha = document.getElementById("loginSenha").value;
       var btnEntrar = document.getElementById("btnEntrar");
+
+      if(modoCadastro){
+        if(senha !== document.getElementById("loginSenha2").value){
+          erroEl.textContent = "As senhas não conferem."; return;
+        }
+        var nomeLoja = document.getElementById("loginLoja").value.trim();
+        if(!nomeLoja){ erroEl.textContent = "Informe o nome da loja."; return; }
+        btnEntrar.disabled = true; btnEntrar.textContent = "Criando…";
+        var cad = await supa.auth.signUp({ email: email, password: senha, options: { data: { nome_loja: nomeLoja } } });
+        btnEntrar.disabled = false; aplicarModo();
+        if(cad.error){
+          erroEl.textContent = /registered|exists/i.test(cad.error.message)
+            ? "Esse e-mail já tem conta. Clique em Entrar."
+            : "Não foi possível criar a conta: " + cad.error.message;
+          return;
+        }
+        if(cad.data.session){ entrarComSessao(cad.data.session); return; }
+        // confirmação de e-mail ligada no Supabase: precisa clicar no link antes de entrar
+        modoCadastro = false; aplicarModo();
+        erroEl.className = "erro-login sucesso";
+        erroEl.textContent = "Conta criada! Confirme pelo link enviado ao seu e-mail e depois entre.";
+        return;
+      }
+
       btnEntrar.disabled = true;
       btnEntrar.textContent = "Entrando…";
       var resp = await supa.auth.signInWithPassword({ email: email, password: senha });
       btnEntrar.disabled = false;
       btnEntrar.textContent = "Entrar";
       if(resp.error){
-        erroEl.textContent = "E-mail ou senha inválidos.";
+        erroEl.textContent = /confirm/i.test(resp.error.message)
+          ? "Confirme seu e-mail pelo link recebido antes de entrar."
+          : "E-mail ou senha inválidos.";
         return;
       }
       entrarComSessao(resp.data.session);
